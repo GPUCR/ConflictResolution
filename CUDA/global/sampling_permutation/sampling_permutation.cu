@@ -1120,7 +1120,7 @@ int host_grid[SIZE+2][SIZE+2];
 
 int main(int argc, char* argv[])
 {
-
+	//Initialization
  	struct timespec start, stop;
     	double accum;
 		
@@ -1237,12 +1237,12 @@ int main(int argc, char* argv[])
 	cached_allocator alloc;
 	int removed_list_number = 0;
 	int space_list_number = 0;
-	for(int i=0; i<ITERATIONS; i++){
+	for(int i=0; i<ITERATIONS; i++){  //Simulation cycles
    		 #ifdef DEBUG
           		cudaDeviceSynchronize();
 			cudaCheckError();
    		 #endif
-
+		//Compute Happiness
 		compute << <gridSize, blockSize >> >(device_grid, device_newGrid, move_list, space_list, i);
 
    		 #ifdef DEBUG
@@ -1252,7 +1252,7 @@ int main(int argc, char* argv[])
 
 
 
-
+		//Remove 0 to form a list of moveable agents
 		removed_move_list_end = thrust::remove(thrust::cuda::par(alloc), move_list, move_list + ((SIZE+2)*(SIZE+2)), 0);
 
 
@@ -1273,6 +1273,8 @@ int main(int argc, char* argv[])
           		cudaDeviceSynchronize();
 			cudaCheckError();
    		 #endif
+
+		//Remove 0 to form a list of available cells
 		removed_space_list_end = thrust::remove(thrust::cuda::par(alloc), space_list, space_list + ((SIZE+2)*(SIZE+2)), 0);
 		
 		space_list_number = removed_space_list_end - space_list;
@@ -1316,7 +1318,7 @@ int main(int argc, char* argv[])
 				cudaCheckError();
 		#endif
 
-
+		//Perfrom sampling
 		sampleP<<<sam_gridSize, SAM_numThreadsPerBlock>>>( devStateSam, devStateHyper,  device_sam_list, samples, removed_list_number, 0, sam_pe_inuse-1);
 
 
@@ -1337,7 +1339,7 @@ int main(int argc, char* argv[])
 			cudaCheckError();
    		 #endif
 
-
+		//Perfrom permutation
 		sendToRandom<<<ceil(removed_list_number/double(numThreadsPerBlock)),blockSizePermu >>>(devState,move_list,device_temp_permutation_list,random_list_counter);
 
 
@@ -1388,7 +1390,7 @@ int main(int argc, char* argv[])
           		cudaDeviceSynchronize();
 			cudaCheckError();
    		 #endif	
-
+		//Mapping
 		assign <<<TwoDimGridSize, numThreadsPerBlock>>> (device_grid, device_newGrid, device_permutation_list, move_list, space_list,samples);
 
    		 #ifdef DEBUG
@@ -1404,7 +1406,7 @@ int main(int argc, char* argv[])
 
 	}
 
-
+	//End Timing
 	if( clock_gettime( CLOCK_REALTIME, &stop) == -1 ) {
     	   perror( "clock gettime" );
    	   exit( EXIT_FAILURE );

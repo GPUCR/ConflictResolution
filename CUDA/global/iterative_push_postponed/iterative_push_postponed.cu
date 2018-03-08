@@ -52,9 +52,7 @@ __device__ int getnextrand(myCurandState_t *state){
 __global__ void initCurand(myCurandState_t state[][SIZE+2], unsigned long seed){
 	int idx = threadIdx.x + blockIdx.x * blockDim.x;
 	int idy=blockIdx.y*blockDim.y+threadIdx.y;
-	//curand_init(seed, idx*(SIZE+2)+idy, 0, &state[idx][idy]);
 	curand_init( 0 ,idx*(SIZE+2)+idy+10, 0, &state[idx][idy]);
-	//curand_init(idx*(SIZE+2)+idy, 0, 0, &state[idx][idy]);
 
 }
 
@@ -70,15 +68,7 @@ __global__ void compute(int grid[][SIZE+2], int new_grid[][SIZE+2], int temp_gri
 	//new_grid[idx][idy] = grid[idx][idy];
 
 	if(grid[idx][idy] != 0){
-		//new_grid[idx][idy] = 3;
-		//for(int i=-1;i<2;i++){
-		//	for(int j=-1; j<2;j++){
-		//		if(i!=0 && j!=0 && (grid[idx+i][idy+j]==grid[idx][idy]) ){
-					
-		//			sameTypeCount += 1;
-		//		} 
-		//	}
-		//}
+
 		int currentType = grid[idx][idy];
 
 		if(grid[idx-1][idy-1] == currentType){
@@ -118,7 +108,7 @@ __global__ void compute(int grid[][SIZE+2], int new_grid[][SIZE+2], int temp_gri
 			// printf("moveable: %d\n", current_priority);
 			
 			temp_grid[idx][idy] =  current_priority;
-       			//atomicAdd(&numberMoveable, 1);
+
 		}
 	}
 	
@@ -132,18 +122,9 @@ __global__ void prepareNewGrid (int temp_grid[][SIZE+2], int new_grid[][SIZE+2])
 	int idy=blockIdx.y*blockDim.y+threadIdx.y;
 
 	if(temp_grid[idx][idy] != 0){
-		//int agent_position = move_list[idx];
-		//int idxTox = idx / PESIZE;
-		//int idxToy = idx % PESIZE;
-		//int agent_position = permutation[idxTox][idxToy];
 
-		//if(agent_position/(SIZE+2)>(SIZE+2)){
-		//	printf("Outside %d %d\n",idx,agent_position);
-		//}
-		//else{
 		new_grid[idx][idy] = 0;
 
-		//}
 	}
 }
 
@@ -163,18 +144,14 @@ __global__ void assign_ (myCurandState_t state[][SIZE+2],int grid[][SIZE+2], int
 	int round =0;
 
 	if(temp_grid[idx][idy] != 0 ){
-			//if(!iteration)
-			//if(current_priority == 2172)
-        // printf("%d wants to move\n", current_priority);
 
 		while(true) {
 			row = getnextrand(&state[idx][idy]);
 			column = getnextrand(&state[idx][idy]);
 			if(new_grid[row][column] == 0){
-                
+                		//Find empty cell and put in the next entry
 				old_value = atomicAdd(&move_grid_counters[row][column], 1);
-                // printf("%d %d going to %d %d, number in line: %d\n", idx, idy, row, column, old_value);
-                move_grid[row][column][old_value] = current_priority;
+                		move_grid[row][column][old_value] = current_priority;
 
 				break;
 
@@ -198,7 +175,7 @@ __global__ void updateTonew (int grid[][SIZE+2], int new_grid[][SIZE+2],int temp
     if(num_agents == 1)
         priority = move_grid[idx][idy][0];
 
-    if(num_agents > 1){
+    if(num_agents > 1){ //More than one agents then select randomly
         int r = getnextrand(&state[idx][idy]) % num_agents;
         priority = move_grid[idx][idy][r];
         agentsLeft = true;
@@ -212,43 +189,30 @@ __global__ void updateTonew (int grid[][SIZE+2], int new_grid[][SIZE+2],int temp
 
 __global__ void newTogrid (int grid[][SIZE+2], int new_grid[][SIZE+2]){
 
-	//int (*device_tmpGrid)[SIZE+2]; 
-	//device_tmpGrid = grid;
+ 
 	int idx=blockIdx.x*blockDim.x+threadIdx.x;
 	int idy=blockIdx.y*blockDim.y+threadIdx.y;
 	grid[idx][idy] = new_grid[idx][idy];
-	//temp_grid[idx][idy] = 0;
-	//move_grid[idx][idy] = 0;
-	//new_grid = device_tmpGrid;
 	
 
 }
 
 __global__ void clearMoveGrid (int move_grid_counters[][SIZE+2]){
 
-	//int (*device_tmpGrid)[SIZE+2];
-	//device_tmpGrid = grid;
 	int idx=blockIdx.x*blockDim.x+threadIdx.x;
 	int idy=blockIdx.y*blockDim.y+threadIdx.y;
-	//grid[idx][idy] = new_grid[idx][idy];
-	//temp_grid[idx][idy] = 0;
-	// move_grid[idx][idy] = 0;
-    move_grid_counters[idx][idy] = 0;
-	//new_grid = device_tmpGrid;
+
+    	move_grid_counters[idx][idy] = 0;
 
 
 }
 
 __global__ void update ( int temp_grid[][SIZE+2],int move_grid_counters[][SIZE+2]){
 
-	//int (*device_tmpGrid)[SIZE+2]; 
-	//device_tmpGrid = grid;
 	int idx=blockIdx.x*blockDim.x+threadIdx.x;
 	int idy=blockIdx.y*blockDim.y+threadIdx.y;
-	//grid[idx][idy] = new_grid[idx][idy];
 	temp_grid[idx][idy] = 0;
 	move_grid_counters[idx][idy] = 0;
-	//new_grid = device_tmpGrid;
 	
 
 }
@@ -296,7 +260,7 @@ int main(int argc, char* argv[])
 {
 
 	cudaDeviceSetLimit(cudaLimitPrintfFifoSize,  10*1024*1024);
-
+	//Initialization
 
  	struct timespec start, stop;
     	double accum;
@@ -308,18 +272,11 @@ int main(int argc, char* argv[])
 	int (*device_tempGrid)[SIZE + 2];
 
  	int (*device_rowAndColumn)[SIZE + 2];
-
-	//int (*device_tmpGrid)[SIZE+2]; 
 	srand(SRAND_VALUE);
 
 	size_t bytes = sizeof(int)*(SIZE + 2)*(SIZE + 2);
-	//host_grid = (int*)malloc(bytes);
 	myCurandState_t (*devState)[SIZE + 2];
 	bool agentsRemain = false;
-	//bool  *agentsRemain = new bool();
-	//*agentsRemain = false;
-	//bool * agentsLeft;
-	//typeof(agentsLeft) agentsRemain;
 	
 	cudaMalloc((void**)&devState, (SIZE+2)*(SIZE+2) * sizeof(myCurandState_t));
 
@@ -331,9 +288,6 @@ int main(int argc, char* argv[])
 
 	cudaMalloc((void**)&device_rowAndColumn, bytes);
 
-	//cudaMalloc(&agentsLeft, sizeof(bool));
-
-
 
 	int blockSizePerDim = sqrt(numThreadsPerBlock);
 	int gridSizePerDim = (SIZE + 2) / blockSizePerDim;
@@ -342,32 +296,25 @@ int main(int argc, char* argv[])
 	dim3 gridSize(gridSizePerDim, gridSizePerDim, 1);
 
 	initCurand<<<gridSize , blockSize>>>(devState, 1);
-	//cudaDeviceSynchronize();
 	for (int i=0; i<(SIZE+2); i++){
 		for (int j=0; j<SIZE+2; j++){
 			host_grid[i][j] = 0;
 		}
 	}
 
-
-	
 	initPos(host_grid);
 	// printOutput(host_grid);
 
 	cudaMemcpy(device_grid,host_grid,bytes,cudaMemcpyHostToDevice);
 	cudaMemcpy(device_newGrid,host_grid,bytes,cudaMemcpyHostToDevice);
-	//cudaMemcpy(device_newGrid,device_grid,bytes,cudaMemcpyDeviceToDevice);
 	
 
 
 	newTogrid << <gridSize, blockSize >> >(device_grid, device_newGrid);
-	//cudaDeviceSynchronize();
-	//cudaCheckError();
 
 	update << <gridSize, blockSize >> >(device_tempGrid,device_moveGridCounters);
-	//cudaDeviceSynchronize();
-	//cudaCheckError();
-	//clock_t begin = clock(); //timing
+
+	//timing
 	if( clock_gettime( CLOCK_REALTIME, &start) == -1 ) {
     	   perror( "clock gettime" );
    	   exit( EXIT_FAILURE );
@@ -375,28 +322,26 @@ int main(int argc, char* argv[])
 	
 	int numRoundsTotal = atoi(argv[1]);
 	int roundCounter = 0;
-    // fprintf(stderr, "before loop\n");
+    	// fprintf(stderr, "before loop\n");
 	for(int i=0; i<numRoundsTotal; i++){
 
 		roundCounter = 0;
 
-       // fprintf(stderr, "before compute\n");
+       		//fprintf(stderr, "before compute\n");
 		compute << <gridSize, blockSize >> >(device_grid, device_newGrid,device_tempGrid);
-        //fprintf(stderr, "after compute\n");
+        	//fprintf(stderr, "after compute\n");
 
 		 #ifdef DEBUG
 			cudaDeviceSynchronize();
 			cudaCheckError();
 		 #endif
-        // fprintf(stderr, "before prepareNewGrid\n");
-		
-		//cudaMemcpy(host_grid, device_newGrid, bytes, cudaMemcpyDeviceToHost);
+        	// fprintf(stderr, "before prepareNewGrid\n");
 
 		
 		prepareNewGrid<<<gridSize, blockSize>>>(device_tempGrid,device_newGrid);
 
 
-        // fprintf(stderr, "before do loop\n");
+        	// fprintf(stderr, "before do loop\n");
 		 #ifdef DEBUG
 			cudaDeviceSynchronize();
 			cudaCheckError();
@@ -409,55 +354,26 @@ int main(int argc, char* argv[])
 			cudaMemcpyToSymbol(agentsLeft,&agentsRemain,sizeof(bool),0,cudaMemcpyHostToDevice);
 
 			assign_ << <gridSize, blockSize >> >(devState,device_grid, device_newGrid,device_tempGrid,device_moveGrid, device_moveGridCounters, device_rowAndColumn);
-			// cudaDeviceSynchronize();
-			// cudaCheckError();
 			
 			updateTonew << <gridSize, blockSize >> >(device_grid, device_newGrid,device_tempGrid,device_moveGrid,device_moveGridCounters,device_rowAndColumn, devState);
-			//update agentLeft
-			// cudaDeviceSynchronize();
-			// cudaCheckError();
 
-			//cudaMemcpy(agentsRemain, agentsLeft, sizeof(bool), cudaMemcpyDeviceToHost);
-			//cudaCheckError();
 			clearMoveGrid<<<gridSize, blockSize >>>(device_moveGridCounters);
-			//newTogrid << <gridSize, blockSize >> >(device_grid, device_newGrid);
-			// cudaDeviceSynchronize();
-			// cudaCheckError();
 			roundCounter ++;
 			cudaMemcpyFromSymbol(&agentsRemain,agentsLeft,sizeof(bool),0, cudaMemcpyDeviceToHost);
 
-		//}while(false && agentsRemain == true);
 		}while(agentsRemain == true);
-		// printf("roundCounter %d  numRounds %d\n", roundCounter,i);
 		//while there are agents left
-
-		// cudaDeviceSynchronize();
-		//cudaCheckError();
-
-		//newTogrid << <gridSize, blockSize >> >(device_grid, device_newGrid);
 
 		newTogrid << <gridSize, blockSize >> >(device_grid, device_newGrid);
 
 	
 		update << <gridSize, blockSize >> >(device_tempGrid,device_moveGridCounters);
-		
-		//cudaMemcpy(device_grid,host_grid,bytes,cudaMemcpyHostToDevice);
-		//cudaMemcpy(device_newGrid,host_grid,bytes,cudaMemcpyHostToDevice);
-
-		
-
-
-		//printOutput(host_grid);
 
 
 	}
 	cudaDeviceSynchronize();
 
 
-
-	//clock_t end = clock();
-	//double time_spent = (double)(end - begin)*1000.0 / CLOCKS_PER_SEC;
-	//printf("Time: %f ms per round\n",time_spent / numRoundsTotal);
 	
 	if( clock_gettime( CLOCK_REALTIME, &stop) == -1 ) {
     	   perror( "clock gettime" );
@@ -468,7 +384,6 @@ int main(int argc, char* argv[])
           + ( stop.tv_nsec - start.tv_nsec ) / 1e3;
 	
     	printf( "%.1f Time is %.5f s \n",float(OCCUPANCY), accum / 1e6);
-	//printConflict<<<1,1>>>();
 	cudaMemcpy(host_grid, device_grid, bytes, cudaMemcpyDeviceToHost);
 	//printOutput(host_grid);
 	//checkNumber(host_grid);
@@ -476,9 +391,7 @@ int main(int argc, char* argv[])
 	cudaFree(device_newGrid);
 	cudaFree(device_tempGrid);
 	cudaFree(devState);
-	//cudaFree(agentsLeft);
 	cudaFree(device_rowAndColumn);
-	//free(host_grid);
 
 	return 0;
 

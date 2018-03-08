@@ -294,16 +294,16 @@ __global__ void assign(myCurandState_t *state, int grid[][SIZE + 2],
             if (row>=1 && row <=SIZE && column>=1 && column<=SIZE && new_grid[row][column] == 0) {
 
                 old_value =
-                    atomicMax(&move_grid[row][column], current_priority);
+                    atomicMax(&move_grid[row][column], current_priority); //Attempt to register
                 if(old_value < current_priority){
 
 
-                    if(old_value != 0){
+                    if(old_value != 0){ //Displaced lower priority
                         agentsLeft = true;
                     }
+		    //else empty cell, do nothing
 
-
-                } else {
+                } else { //Failed to register, left to next iteration 
                     agentsLeft = true;
                 }
 
@@ -591,6 +591,8 @@ int main(int argc, char *argv[])
 {
 
     cudaDeviceSetLimit(cudaLimitPrintfFifoSize, 1024 * 1024 * 1000);
+
+    //Initialization
     struct timespec start, stop;
     double accum;
 
@@ -698,9 +700,10 @@ int main(int argc, char *argv[])
 
     int oneDimGridSize = ceil(PENUMBER / double(numThreadsPerBlock));
 
-	cached_allocator alloc;
-	for (int i = 0; i < ITERATIONS; i++) {
+    cached_allocator alloc;
+    for (int i = 0; i < ITERATIONS; i++) { //Simulation cycles
 
+	//Sampling and permutation
         clearCounter<<<oneDimGridSize, (numThreadsPerBlock)>>>(random_list_counter);
 
 #ifdef DEBUG
@@ -769,12 +772,13 @@ int main(int argc, char *argv[])
                                              device_tempGrid,
                                              device_moveGrid,
                                              device_permutation_list);
+	//Compute Happiness
 
 #ifdef DEBUG
         cudaDeviceSynchronize();
         cudaCheckError();
 #endif
-
+	//Move out moveable agents
         prepareNewGrid <<< gridSize, blockSize >>> (device_tempGrid,
                                                     device_newGrid);
 
@@ -806,7 +810,7 @@ int main(int argc, char *argv[])
             cudaMemcpyFromSymbol(&agentsRemain,agentsLeft,sizeof(bool),0, cudaMemcpyDeviceToHost);
 
 
-        } while(agentsRemain);
+        } while(agentsRemain); //Until no moveable agent remaining
 #ifdef DEBUG
         cudaDeviceSynchronize();
         cudaCheckError();
@@ -830,7 +834,7 @@ int main(int argc, char *argv[])
 
     cudaDeviceSynchronize();
 
-
+	//End Timing
 	if (clock_gettime(CLOCK_REALTIME, &stop) == -1) {
 		perror("clock gettime");
 		exit(EXIT_FAILURE);

@@ -135,7 +135,7 @@ __global__ void assign_ (myCurandState_t state[][SIZE+2],int grid[][SIZE+2], int
 	int column = 0;
 	int old_value;
 
-    bool locallyfailed = false;
+    	bool locallyfailed = false;
 
 	if(temp_grid[idx][idy] != 0 ){
 
@@ -157,8 +157,9 @@ __global__ void assign_ (myCurandState_t state[][SIZE+2],int grid[][SIZE+2], int
 
 			if(row>=1 && row <=SIZE && column>=1 && column<=SIZE && new_grid[row][column] == 0 ){
                 
+				//Place in the next entry
 				old_value = atomicAdd(&move_grid_counters[row][column], 1);
-                move_grid[row][column][old_value] = current_priority;
+                		move_grid[row][column][old_value] = current_priority;
 
                 return;
 
@@ -186,7 +187,7 @@ __global__ void updateTonew (int grid[][SIZE+2], int new_grid[][SIZE+2],int temp
     if(num_agents == 1)
         priority = move_grid[idx][idy][0];
 
-    if(num_agents > 1){
+    if(num_agents > 1){ //More than one, select randomly
         int r = getnextrand(&state[idx][idy]) % num_agents;
         priority = move_grid[idx][idy][r];
         agentsLeft = true;
@@ -262,7 +263,7 @@ int main(int argc, char* argv[])
 
 	cudaDeviceSetLimit(cudaLimitPrintfFifoSize,  10*1024*1024);
 
-
+	//Initialization
  	struct timespec start, stop;
     	double accum;
 	int (*device_grid)[SIZE + 2];
@@ -316,15 +317,16 @@ int main(int argc, char* argv[])
 	newTogrid << <gridSize, blockSize >> >(device_grid, device_newGrid);
 
 	update << <gridSize, blockSize >> >(device_tempGrid,device_moveGridCounters);
+	//Timing
 	if( clock_gettime( CLOCK_REALTIME, &start) == -1 ) {
     	   perror( "clock gettime" );
    	   exit( EXIT_FAILURE );
    	 }
 	
 	int numRoundsTotal = atoi(argv[1]);
-	for(int i=0; i<numRoundsTotal; i++){
+	for(int i=0; i<numRoundsTotal; i++){ //Simulation cycles
 
-
+		//Compute Happiness
 		compute << <gridSize, blockSize >> >(device_grid, device_newGrid,device_tempGrid);
 
 		#ifdef DEBUG
@@ -333,7 +335,7 @@ int main(int argc, char* argv[])
 		#endif
 		
 
-		
+		//Move out moveable agents
 		prepareNewGrid<<<gridSize, blockSize>>>(device_tempGrid,device_newGrid);
 
 
@@ -355,7 +357,7 @@ int main(int argc, char* argv[])
 			clearMoveGrid<<<gridSize, blockSize >>>(device_moveGridCounters);
 			cudaMemcpyFromSymbol(&agentsRemain,agentsLeft,sizeof(bool),0, cudaMemcpyDeviceToHost);
 
-		}while(agentsRemain == true);
+		}while(agentsRemain == true); //Until no moveable agent remaining
 
 
 		newTogrid << <gridSize, blockSize >> >(device_grid, device_newGrid);
@@ -370,7 +372,7 @@ int main(int argc, char* argv[])
 
 
 
-	
+	//End Timing
 	if( clock_gettime( CLOCK_REALTIME, &stop) == -1 ) {
     	   perror( "clock gettime" );
    	   exit( EXIT_FAILURE );

@@ -135,15 +135,15 @@ __global__ void assign_ (myCurandState_t state[][SIZE+2],int grid[][SIZE+2], int
 	int row = 0;
 	int column = 0;
 
-    bool locallyfailed = false;
+    	bool locallyfailed = false;
 
-    int local_neighborhood = limitedNeighbourhood;
+    	int local_neighborhood = limitedNeighbourhood;
 
 	if(temp_grid[idx][idy] != 0 ){
 
         int loopCounter = 0;
         do {
-            if(!locallyfailed) {
+            if(!locallyfailed) { //Try to find a local empty cell
                 int randomRow = (getnextrand(&state[idx][idy]) % local_neighborhood) - (local_neighborhood / 2);
                 row = idx + randomRow;
 
@@ -164,7 +164,7 @@ __global__ void assign_ (myCurandState_t state[][SIZE+2],int grid[][SIZE+2], int
 
 			}
             loopCounter++;
-            if(loopCounter > 10){
+            if(loopCounter > 10){ //Increase neighbourhood size
                 local_neighborhood += 3;
                 atomicMax(&cell_neighbourhood, local_neighborhood);
                 loopCounter = 0;
@@ -176,8 +176,8 @@ __global__ void assign_ (myCurandState_t state[][SIZE+2],int grid[][SIZE+2], int
 
 
 __global__ void updateTonew (int grid[][SIZE+2], int new_grid[][SIZE+2],int temp_grid[][SIZE+2],int move_grid[][SIZE+2], int rowAndColumn[][SIZE+2], myCurandState_t state[][SIZE + 2]){
-	int idx=blockIdx.x*blockDim.x+threadIdx.x;
-	int idy=blockIdx.y*blockDim.y+threadIdx.y;
+    int idx=blockIdx.x*blockDim.x+threadIdx.x;
+    int idy=blockIdx.y*blockDim.y+threadIdx.y;
 
     int candidates[CONFLICT_LIST_LENGTH];
     int num_candidates = 0;
@@ -211,7 +211,7 @@ __global__ void updateTonew (int grid[][SIZE+2], int new_grid[][SIZE+2],int temp
     if(num_candidates == 1)
         priority = candidates[0];
 
-    if(num_candidates > 1){
+    if(num_candidates > 1){ //More than one, select randomly
         int r = getnextrand(&state[idx][idy]) % num_candidates;
         priority = candidates[r];
         agentsLeft = true;
@@ -296,7 +296,7 @@ int main(int argc, char* argv[])
 {
 
 	cudaDeviceSetLimit(cudaLimitPrintfFifoSize,  10*1024*1024);
-
+	//Initialization
 
  	struct timespec start, stop;
     	double accum;
@@ -357,19 +357,19 @@ int main(int argc, char* argv[])
 	
 	int numRoundsTotal = atoi(argv[1]);
 	int roundCounter = 0;
-	for(int i=0; i<numRoundsTotal; i++){
+	for(int i=0; i<numRoundsTotal; i++){ //Simulation cycles
 
 		roundCounter = 0;
 
 		compute << <gridSize, blockSize >> >(device_grid, device_newGrid,device_tempGrid);
-
+		//Compute Happiness
 		 #ifdef DEBUG
 			cudaDeviceSynchronize();
 			cudaCheckError();
 		 #endif
 		
 
-		
+		//Move out moveable agents
 		prepareNewGrid<<<gridSize, blockSize>>>(device_tempGrid,device_newGrid);
 
 
@@ -392,7 +392,7 @@ int main(int argc, char* argv[])
 			roundCounter ++;
 			cudaMemcpyFromSymbol(&agentsRemain,agentsLeft,sizeof(bool),0, cudaMemcpyDeviceToHost);
 
-		}while(agentsRemain == true);
+		}while(agentsRemain == true); //Until no moveable agent remaining
 
 
 		newTogrid << <gridSize, blockSize >> >(device_grid, device_newGrid);

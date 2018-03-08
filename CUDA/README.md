@@ -16,7 +16,7 @@
 		./auto.sh
 
 		Output file -> out.eps 		
-
+		Figure 3: Simulation runtime with global movement
 
 	Limited case,
 
@@ -26,3 +26,9 @@
 	        ./auto.sh
 
 		Output file -> limited.eps 
+		Figure 4: Simulation runtime with limited neighborhood.
+
+
+## Results obtained using
+
+	NVIDIA Tesla K20Xm with CUDA 7.5

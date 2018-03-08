@@ -137,7 +137,7 @@ __global__ void updateTonew(int grid[][SIZE + 2], int new_grid[][SIZE + 2],
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int idy = blockIdx.y * blockDim.y + threadIdx.y;
 
-    int row = idx + 1; // TODO: very uncertain about this
+    int row = idx + 1; 
     int column = idy + 1;
 
     int current_priority = move_grid[row][column];
@@ -264,7 +264,7 @@ __global__ void assign(myCurandState_t *state, int grid[][SIZE + 2],
     if (temp_grid[idx][idy] != 0) {
         do {
             local_trials[idx][idy]++;
-
+	    //Increase neighbourhood size
             localLimitedNeighbourhood = limitedNeighbourhood * ((local_trials[idx][idy] / 10) + 1);
 
             int randomRow = (getnextrandint(&state[idx * (SIZE + 2) + idy]) % localLimitedNeighbourhood) - (localLimitedNeighbourhood / 2);
@@ -591,6 +591,7 @@ int main(int argc, char *argv[])
 {
 
     cudaDeviceSetLimit(cudaLimitPrintfFifoSize, 1024 * 1024 * 1000);
+    //Initialization
     struct timespec start, stop;
     double accum;
 
@@ -723,7 +724,7 @@ int main(int argc, char *argv[])
 	cudaDeviceSynchronize();
 	cudaCheckError();
 #endif
-
+	//Timing
 	if (clock_gettime(CLOCK_REALTIME, &start) == -1) {
 		perror("clock gettime");
 		exit(EXIT_FAILURE);
@@ -751,9 +752,9 @@ int main(int argc, char *argv[])
     int oneDimGridSize = ceil(PENUMBER / double(numThreadsPerBlock));
 
 	cached_allocator alloc;
-	for (int i = 0; i < ITERATIONS; i++) {
+	for (int i = 0; i < ITERATIONS; i++) { //Simulation cycles
 
-
+		//Sampling and permutation
         	clearCounter<<<oneDimGridSize, (numThreadsPerBlock)>>>(random_list_counter);
 
 #ifdef DEBUG
@@ -821,12 +822,12 @@ int main(int argc, char *argv[])
                                              device_tempGrid,
                                              device_moveGrid,
                                              device_permutation_list);
-
+	//Compute Happiness
 #ifdef DEBUG
         cudaDeviceSynchronize();
         cudaCheckError();
 #endif
-
+	//Move out moveable agents
         prepareNewGrid <<< gridSize, blockSize >>> (device_tempGrid,
                                                     device_newGrid,
                                                     device_local_trials);
@@ -877,7 +878,7 @@ int main(int argc, char *argv[])
 
     cudaDeviceSynchronize();
 
-
+	//End Timing
 	if (clock_gettime(CLOCK_REALTIME, &stop) == -1) {
 		perror("clock gettime");
 		exit(EXIT_FAILURE);

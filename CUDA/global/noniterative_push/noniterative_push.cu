@@ -26,6 +26,7 @@ using namespace std;
 //const int agentNumber = (SIZE * SIZE / 2);
 
 
+
 const int agentTypeOneNumber = agentNumber / 2;
 const int agentTypeTwoNumber = agentNumber - agentTypeOneNumber;
 const int happinessThreshold = 5;
@@ -36,8 +37,6 @@ void printToFile(int[SIZE + 2][SIZE + 2]);
 void initPos(int grid[SIZE + 2][SIZE + 2]);
 int random_location();
 
-__device__ unsigned int numberConflict = 0;
-__device__ unsigned int numberMoveable = 0;
 
 __device__ int getnextrand(myCurandState_t *state){
 
@@ -150,18 +149,18 @@ __global__ void assign(myCurandState_t state[][SIZE + 2], int grid[][SIZE + 2],
 
 				else if (new_value < current_priority) {	//agent with lower priority inside the cell
 
-					atomicAdd(&numberConflict, 1);
+
 					idx = new_value / (SIZE + 2);
 					idy = new_value % (SIZE + 2);
 					current_priority = new_value;
 
 				}
 
-				else{  //agent with higher priority inside the cell -> repeat
+				//else{  //agent with higher priority inside the cell -> repeat
 
-				atomicAdd(&numberConflict, 1);
 
-				}
+
+				//}
 
 
 			}
@@ -276,6 +275,7 @@ int host_grid[SIZE + 2][SIZE + 2];
 int main(int argc, char *argv[])
 {
 	cudaDeviceSetLimit(cudaLimitPrintfFifoSize, 1024 * 1024 * 100);
+	//Initialization
 	struct timespec start, stop;
 	double accum;
 	int (*device_grid)[SIZE + 2];
@@ -327,16 +327,18 @@ int main(int argc, char *argv[])
 	newTogrid << <gridSize, blockSize >> >(device_grid, device_newGrid);
 
 	update << <gridSize, blockSize >> >(device_tempGrid, device_moveGrid,
+
 										device_rowAndColumn);
+	//Timing
 	if (clock_gettime(CLOCK_REALTIME, &start) == -1) {
 		perror("clock gettime");
 		exit(EXIT_FAILURE);
 	}
 
 	int numRoundsTotal = atoi(argv[1]);
-	for (int i = 0; i < numRoundsTotal; i++) {
+	for (int i = 0; i < numRoundsTotal; i++) { //Simulation cycles
 
-
+		//Compute Happiness
 		compute << <gridSize, blockSize >> >(device_grid, device_newGrid,
 											 device_tempGrid,
 											 device_moveGrid);
@@ -345,7 +347,7 @@ int main(int argc, char *argv[])
 		cudaDeviceSynchronize();
 		cudaCheckError();
 #endif
-
+		//Move out moveable agents
 		prepareNewGrid <<< gridSize, blockSize >>> (device_tempGrid,
 													device_newGrid);
 
@@ -390,7 +392,7 @@ int main(int argc, char *argv[])
 	}
 	cudaDeviceSynchronize();
 
-
+	//End Timing
 	if (clock_gettime(CLOCK_REALTIME, &stop) == -1) {
 		perror("clock gettime");
 		exit(EXIT_FAILURE);
