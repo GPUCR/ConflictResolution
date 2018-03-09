@@ -33,6 +33,6 @@
 
 	NVIDIA Tesla K20Xm with CUDA 7.5
 
-##Code Available 
+## Code Available 
 
 	https://github.com/GPUCR/ConflictResolution
