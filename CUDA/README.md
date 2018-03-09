@@ -32,3 +32,7 @@
 ## Results obtained using
 
 	NVIDIA Tesla K20Xm with CUDA 7.5
+
+##Code Available 
+
+	https://github.com/GPUCR/ConflictResolution
